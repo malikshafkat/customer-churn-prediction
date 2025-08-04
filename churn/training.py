@@ -1,28 +1,50 @@
+import numpy as np
 import pickle
-from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
-from imblearn.over_sampling import SMOTE
+from xgboost import XGBClassifier
+from sklearn.model_selection import cross_val_score
 
-def train_and_save_model(df, output_model_path, output_enc_path):
-    X = df.drop(columns=["Churn"])
-    y = df["Churn"]
+def get_models():
+    """
+    Returns a dictionary of models to train.
+    """
+    models = {
+        "Decision Tree": DecisionTreeClassifier(random_state=42),
+        "Random Forest": RandomForestClassifier(random_state=42),
+        "XGBoost": XGBClassifier(random_state=42)
+    }
+    return models
 
-    # Encode categorical features
-    from sklearn.preprocessing import LabelEncoder
-    encoders = {}
-    for col in X.select_dtypes(include="object").columns:
-        le = LabelEncoder()
-        X[col] = le.fit_transform(X[col])
-        encoders[col] = le
+def cross_validate_models(models: dict, X_train, y_train, cv: int = 5):
+    """
+    Perform cross-validation for each model.
+    Returns a dictionary of cross-validation scores.
+    """
+    cv_scores = {}
+    for model_name, model in models.items():
+        print(f"Training {model_name} with default parameters")
+        scores = cross_val_score(model, X_train, y_train, cv=cv, scoring="accuracy")
+        cv_scores[model_name] = scores
+        print(f"{model_name} cross-validation accuracy: {np.mean(scores):.2f}")
+        print("-"*70)
+    return cv_scores
 
-    X_train, _, y_train, _ = train_test_split(X, y, test_size=0.2, random_state=42)
-    smote = SMOTE()
-    X_res, y_res = smote.fit_resample(X_train, y_train)
-
+def train_final_model(X_train, y_train):
+    """
+    Train the final model (Random Forest, as selected in the notebook).
+    """
     model = RandomForestClassifier(random_state=42)
-    model.fit(X_res, y_res)
+    model.fit(X_train, y_train)
+    return model
 
-    with open(output_model_path, "wb") as f:
-        pickle.dump({"model": model, "features_names": X.columns.tolist()}, f)
-    with open(output_enc_path, "wb") as f:
-        pickle.dump(encoders, f)
+def save_model(model, feature_names, path: str = "models/customer_churn_model.pkl"):
+    """
+    Save the trained model and feature names using pickle.
+    """
+    model_data = {
+        "model": model,
+        "features_names": feature_names
+    }
+    with open(path, "wb") as f:
+        pickle.dump(model_data, f)
