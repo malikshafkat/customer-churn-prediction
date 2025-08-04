@@ -95,16 +95,3 @@ The `app.py` script runs everything:
 5. Saves the final model
 6. Makes a sample prediction
 
----
-
-## How to Run
-
-### 1. Setup
-
-```bash
-python -m venv venv
-venv\Scripts\activate   # Windows
-# or
-source venv/bin/activate   # Mac/Linux
-
-pip install -r requirements.txt
